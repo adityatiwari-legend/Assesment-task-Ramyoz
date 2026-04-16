@@ -6,7 +6,8 @@ import {
   DragEndEvent,
   DragOverlay,
   DragStartEvent,
-  PointerSensor,
+  TouchSensor,
+  MouseSensor,
   useSensor,
   useSensors,
   closestCenter,
@@ -45,8 +46,14 @@ export default function Board({ initialTasks }: BoardProps) {
   const { user, logout } = useAuth();
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: { distance: 8 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
     })
   );
 
@@ -182,28 +189,28 @@ export default function Board({ initialTasks }: BoardProps) {
       >
         <div className="flex-1 flex flex-col min-h-screen">
           {/* Brutalist Header matching "Task List" style from the design */}
-          <header className="sticky top-0 z-30 pt-8 pb-4 bg-[#EAE0FB]">
+          <header className="sticky top-0 z-30 pt-4 sm:pt-8 pb-3 sm:pb-4 bg-[#EAE0FB]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-6">
                 
                 {/* Logo / Title */}
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-[#FDA4D4] border-2 border-black flex items-center justify-center shadow-brutal">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-[#FDA4D4] border-2 border-black flex items-center justify-center shadow-brutal">
                     <svg className="w-6 h-6 text-black" fill="none" strokeWidth={2.5} stroke="currentColor" viewBox="0 0 24 24">
                       <rect x="3" y="3" width="18" height="18" rx="4" />
                       <line x1="9" y1="3" x2="9" y2="21" />
                     </svg>
                   </div>
-                  <h1 className="text-3xl font-black tracking-tight text-black">
+                  <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-black">
                     Mini Kanban Board
                   </h1>
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full lg:w-auto">
                   <SearchBar value={searchQuery} onChange={setSearchQuery} />
                   
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-between sm:justify-start gap-3">
                     <button
                       onClick={fetchTasks}
                       disabled={isRefreshing}
@@ -231,7 +238,7 @@ export default function Board({ initialTasks }: BoardProps) {
                       {showBoardMenu && (
                         <>
                           <div className="fixed inset-0 z-40" onClick={() => setShowBoardMenu(false)}></div>
-                          <div className="absolute right-0 mt-3 w-56 bg-white border-2 border-black rounded-2xl shadow-brutal z-50 overflow-hidden animate-in slide-in-from-top-2 duration-150">
+                          <div className="absolute right-0 mt-3 w-52 sm:w-56 bg-white border-2 border-black rounded-2xl shadow-brutal z-50 overflow-hidden animate-in slide-in-from-top-2 duration-150">
                             <div className="px-4 py-2 bg-gray-100 border-b-2 border-black text-xs font-bold text-gray-500 uppercase tracking-widest">
                               Board Settings
                             </div>
@@ -258,14 +265,14 @@ export default function Board({ initialTasks }: BoardProps) {
                   </div>
                   
                   {user && (
-                    <div className="flex items-center justify-between sm:justify-start gap-3 sm:ml-2 sm:pl-4 sm:border-l-2 sm:border-black w-full sm:w-auto">
-                      <div className="flex flex-1 sm:flex-none items-center gap-2 px-4 py-2 bg-white border-2 border-black rounded-full shadow-brutal-sm font-bold truncate max-w-[200px] sm:max-w-[150px]">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:ml-2 sm:pl-4 sm:border-l-2 sm:border-black w-full sm:w-auto">
+                      <div className="flex w-full sm:w-auto items-center gap-2 px-4 py-2 bg-white border-2 border-black rounded-full shadow-brutal-sm font-bold truncate max-w-full sm:max-w-[170px]">
                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0"></div>
                         <span className="truncate">{user.username}</span>
                       </div>
                       <button
                         onClick={logout}
-                        className="px-4 py-2 border-2 border-black bg-[#FDA4D4] hover:bg-[#F970B5] text-black font-bold uppercase tracking-wide rounded-full shadow-brutal-sm active:translate-y-1 active:translate-x-1 active:shadow-none transition-all cursor-pointer whitespace-nowrap"
+                        className="w-full sm:w-auto px-4 py-2 border-2 border-black bg-[#FDA4D4] hover:bg-[#F970B5] text-black font-bold uppercase tracking-wide rounded-full shadow-brutal-sm active:translate-y-1 active:translate-x-1 active:shadow-none transition-all cursor-pointer whitespace-nowrap"
                       >
                         Logout
                       </button>
@@ -276,14 +283,14 @@ export default function Board({ initialTasks }: BoardProps) {
             </div>
           </header>
 
-          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32">
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-28 sm:pb-32">
             {searchQuery && filteredTasks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 bg-white border-2 border-black rounded-3xl shadow-brutal">
+              <div className="flex flex-col items-center justify-center py-16 sm:py-20 bg-white border-2 border-black rounded-3xl shadow-brutal">
                 <p className="text-xl font-bold text-black">No tasks found</p>
                 <button onClick={() => setSearchQuery("")} className="mt-4 px-6 py-2 bg-black text-white rounded-full font-bold">Clear search</button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                 {COLUMN_ORDER.map((status) => (
                   <Column key={status} status={status} tasks={groupedTasks[status]} onEdit={setEditingTask} onDelete={setDeletingTask} onMove={handleMove} />
                 ))}

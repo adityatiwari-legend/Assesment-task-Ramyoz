@@ -59,30 +59,30 @@ export default function TaskForm({ onTaskCreated }: TaskFormProps) {
       {/* Floating Action Button (Pink) matching the design */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-8 right-8 z-40 flex items-center justify-center 
-                   w-14 h-14 bg-[#FDA4D4] rounded-2xl border-2 border-black
+        className="fixed bottom-5 right-5 sm:bottom-8 sm:right-8 z-40 flex items-center justify-center 
+                   w-12 h-12 sm:w-14 sm:h-14 bg-[#FDA4D4] rounded-2xl border-2 border-black
                    shadow-brutal hover:shadow-brutal active:shadow-none active:translate-y-1 active:translate-x-1
                    text-black font-medium transition-all duration-150"
       >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+        <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
         </svg>
       </button>
 
       {/* Modal Overlay */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 modal-backdrop">
           <form
             onSubmit={handleSubmit}
-            className="w-full max-w-sm bg-white rounded-[32px] border-2 border-black p-6 space-y-5
+            className="w-full max-w-md sm:max-w-sm bg-white rounded-[28px] sm:rounded-[32px] border-2 border-black p-5 sm:p-6 space-y-4 sm:space-y-5
                        shadow-brutal-lg animate-in fade-in duration-200"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-black text-black tracking-tight">Create Task</h3>
+              <h3 className="text-base sm:text-lg font-black text-black tracking-tight">Create Task</h3>
               <button
                 type="button"
                 onClick={() => { setIsOpen(false); setError(null); }}
-                className="w-8 h-8 flex items-center justify-center rounded-full border-2 border-transparent hover:border-black hover:bg-gray-100 transition-colors"
+                className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full border-2 border-transparent hover:border-black hover:bg-gray-100 transition-colors"
                 title="Cancel"
               >
                 <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>

@@ -49,24 +49,24 @@ export default function EditModal({ task, onClose, onSave }: EditModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 modal-backdrop">
       <div 
         className="absolute inset-0 bg-transparent"
         onClick={handleClose} 
       />
       <div
-        className={`relative w-full max-w-sm bg-white rounded-[32px] border-2 border-black p-6
+        className={`relative w-full max-w-md sm:max-w-sm bg-white rounded-[28px] sm:rounded-[32px] border-2 border-black p-5 sm:p-6
                    shadow-brutal-lg transition-all duration-200
                    ${isClosing ? "opacity-0 scale-95" : "animate-in fade-in zoom-in-95"}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-modal-title"
       >
-        <div className="flex items-center justify-between mb-5">
-           <h3 id="edit-modal-title" className="text-xl font-black text-black">
+        <div className="flex items-center justify-between mb-5 gap-2">
+           <h3 id="edit-modal-title" className="text-lg sm:text-xl font-black text-black">
              Edit Task
            </h3>
-           <div className="px-3 py-1 bg-yellow-100 border-2 border-black rounded-full text-xs font-bold shadow-brutal-sm">
+           <div className="px-2.5 sm:px-3 py-1 bg-yellow-100 border-2 border-black rounded-full text-[10px] sm:text-xs font-bold shadow-brutal-sm">
              {task.status.replace("_", " ").toUpperCase()}
            </div>
         </div>
@@ -108,12 +108,12 @@ export default function EditModal({ task, onClose, onSave }: EditModalProps) {
             </p>
           )}
 
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-2">
             <button
               type="button"
               onClick={handleClose}
               disabled={isSubmitting}
-              className="px-5 py-2.5 rounded-xl font-bold text-black bg-white border-2 border-black
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-bold text-black bg-white border-2 border-black
                          shadow-brutal-sm hover:shadow-brutal hover:bg-gray-50 disabled:opacity-50
                          active:shadow-none active:translate-y-1 active:translate-x-1 transition-all"
             >
@@ -122,7 +122,7 @@ export default function EditModal({ task, onClose, onSave }: EditModalProps) {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-2.5 rounded-xl font-bold text-white bg-[#5EDA7F] border-2 border-black
+              className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-white bg-[#5EDA7F] border-2 border-black
                          shadow-brutal-sm hover:shadow-brutal hover:bg-green-400 disabled:opacity-50
                          active:shadow-none active:translate-y-1 active:translate-x-1 transition-all flex items-center justify-center gap-2"
             >

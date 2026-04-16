@@ -43,9 +43,9 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#EAE0FB] p-6">
-      <div className="w-full max-w-md bg-white border-4 border-black rounded-2xl p-8 shadow-[8px_8px_0px_#000000]">
-        <h1 className="text-3xl font-black mb-6 uppercase tracking-tight text-center">Register</h1>
+    <div className="min-h-screen flex items-center justify-center bg-[#EAE0FB] p-4 sm:p-6">
+      <div className="w-full max-w-md bg-white border-4 border-black rounded-2xl p-6 sm:p-8 shadow-[8px_8px_0px_#000000]">
+        <h1 className="text-2xl sm:text-3xl font-black mb-5 sm:mb-6 uppercase tracking-tight text-center">Register</h1>
         
         {error && (
           <div className="mb-4 p-3 bg-red-100 border-2 border-red-500 rounded-lg text-red-600 font-bold text-sm">
@@ -54,7 +54,7 @@ export default function RegisterPage() {
         )}
 
         <form onSubmit={handleRegister} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-bold text-black mb-1 uppercase">First Name</label>
               <input
@@ -104,7 +104,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-4 px-6 bg-[#A1F6B6] hover:bg-[#8AF0A3] text-black font-bold uppercase tracking-widest rounded-xl border-2 border-black shadow-[4px_4px_0px_#000000] active:shadow-none active:translate-y-1 active:translate-x-1 transition-all disabled:opacity-50"
+            className="w-full py-3.5 sm:py-4 px-6 bg-[#A1F6B6] hover:bg-[#8AF0A3] text-black font-bold uppercase tracking-widest rounded-xl border-2 border-black shadow-[4px_4px_0px_#000000] active:shadow-none active:translate-y-1 active:translate-x-1 transition-all disabled:opacity-50"
           >
             {isLoading ? "Creating..." : "Create Account"}
           </button>
