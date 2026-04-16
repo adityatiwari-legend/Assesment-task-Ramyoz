@@ -35,6 +35,8 @@ export default function Board({ initialTasks }: BoardProps) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [searchQuery, setSearchQuery] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+  const [showBoardMenu, setShowBoardMenu] = useState(false);
 
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
@@ -66,10 +68,14 @@ export default function Board({ initialTasks }: BoardProps) {
     };
     filteredTasks.forEach((t) => groups[t.status].push(t));
     Object.values(groups).forEach((arr) =>
-      arr.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      arr.sort((a, b) => 
+        sortOrder === "newest" 
+          ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          : new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      )
     );
     return groups;
-  }, [filteredTasks]);
+  }, [filteredTasks, sortOrder]);
 
   const fetchTasks = useCallback(async () => {
     setIsRefreshing(true);
@@ -176,7 +182,7 @@ export default function Board({ initialTasks }: BoardProps) {
       >
         <div className="flex-1 flex flex-col min-h-screen">
           {/* Brutalist Header matching "Task List" style from the design */}
-          <header className="sticky top-0 z-30 pt-8 pb-4">
+          <header className="sticky top-0 z-30 pt-8 pb-4 bg-[#EAE0FB]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                 
@@ -189,7 +195,7 @@ export default function Board({ initialTasks }: BoardProps) {
                     </svg>
                   </div>
                   <h1 className="text-3xl font-black tracking-tight text-black">
-                    Task List
+                    Mini Kanban Board
                   </h1>
                 </div>
 
@@ -209,15 +215,46 @@ export default function Board({ initialTasks }: BoardProps) {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                       </svg>
                     </button>
-                    <button
-                      className="w-12 h-12 flex-shrink-0 rounded-full border-2 border-black bg-white
-                                 hover:bg-gray-100 flex items-center justify-center shadow-brutal-sm
-                                 active:translate-y-1 active:translate-x-1 active:shadow-none transition-all cursor-pointer"
-                    >
-                      <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                      </svg>
-                    </button>
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowBoardMenu(!showBoardMenu)}
+                        className={`w-12 h-12 flex-shrink-0 rounded-full border-2 border-black 
+                                   hover:bg-gray-100 flex items-center justify-center shadow-brutal-sm
+                                   active:translate-y-1 active:translate-x-1 active:shadow-none transition-all cursor-pointer
+                                   ${showBoardMenu ? 'bg-gray-200' : 'bg-white'}`}
+                      >
+                        <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                        </svg>
+                      </button>
+                      
+                      {showBoardMenu && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setShowBoardMenu(false)}></div>
+                          <div className="absolute right-0 mt-3 w-56 bg-white border-2 border-black rounded-2xl shadow-brutal z-50 overflow-hidden animate-in slide-in-from-top-2 duration-150">
+                            <div className="px-4 py-2 bg-gray-100 border-b-2 border-black text-xs font-bold text-gray-500 uppercase tracking-widest">
+                              Board Settings
+                            </div>
+                            <div className="p-2 space-y-1">
+                              <button
+                                onClick={() => { setSortOrder("newest"); setShowBoardMenu(false); }}
+                                className={`w-full text-left px-4 py-2 font-bold rounded-xl transition-colors flex items-center justify-between ${sortOrder === "newest" ? "bg-[#A1F6B6]" : "hover:bg-gray-100"}`}
+                              >
+                                Sort: Newest First
+                                {sortOrder === "newest" && <span className="text-xl leading-none">✓</span>}
+                              </button>
+                              <button
+                                onClick={() => { setSortOrder("oldest"); setShowBoardMenu(false); }}
+                                className={`w-full text-left px-4 py-2 font-bold rounded-xl transition-colors flex items-center justify-between ${sortOrder === "oldest" ? "bg-[#A1F6B6]" : "hover:bg-gray-100"}`}
+                              >
+                                Sort: Oldest First
+                                {sortOrder === "oldest" && <span className="text-xl leading-none">✓</span>}
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                   
                   {user && (
