@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Task } from "@/types/task";
 
 interface EditModalProps {
@@ -12,18 +12,22 @@ interface EditModalProps {
 export default function EditModal({ task, onClose, onSave }: EditModalProps) {
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || "");
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
+  const [isClosing, setIsClosing] = useState(false);
 
-  // Close on Escape key
+  // Focus trap workaround
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "unset";
     };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [onClose]);
+  }, []);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(onClose, 200); // Wait for exit animation
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,108 +35,112 @@ export default function EditModal({ task, onClose, onSave }: EditModalProps) {
       setError("Title is required");
       return;
     }
-    setIsSaving(true);
     setError(null);
+    setIsSubmitting(true);
+
     try {
       await onSave(task.id, title.trim(), description.trim());
-      onClose();
+      handleClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
+      setError(err instanceof Error ? err.message : "Failed to update task");
     } finally {
-      setIsSaving(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div
-      ref={overlayRef}
-      onClick={(e) => e.target === overlayRef.current && onClose()}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4
-                 bg-black/60 modal-backdrop"
-    >
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-md rounded-2xl border border-border-custom
-                   bg-slate-900 p-6 space-y-5 shadow-2xl shadow-black/40"
-        onClick={(e) => e.stopPropagation()}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+      <div 
+        className="absolute inset-0 bg-transparent"
+        onClick={handleClose} 
+      />
+      <div
+        className={`relative w-full max-w-sm bg-white rounded-[32px] border-2 border-black p-6
+                   shadow-brutal-lg transition-all duration-200
+                   ${isClosing ? "opacity-0 scale-95" : "animate-in fade-in zoom-in-95"}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-modal-title"
       >
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-foreground">Edit Task</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+        <div className="flex items-center justify-between mb-5">
+           <h3 id="edit-modal-title" className="text-xl font-black text-black">
+             Edit Task
+           </h3>
+           <div className="px-3 py-1 bg-yellow-100 border-2 border-black rounded-full text-xs font-bold shadow-brutal-sm">
+             {task.status.replace("_", " ").toUpperCase()}
+           </div>
         </div>
 
-        <div>
-          <label htmlFor="edit-title" className="block text-xs font-medium text-slate-400 mb-1.5">
-            Title <span className="text-red-400">*</span>
-          </label>
-          <input
-            id="edit-title"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-lg bg-slate-800/70 border border-border-custom
-                       text-foreground placeholder-slate-500
-                       focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30
-                       transition-all duration-200 text-sm"
-            autoFocus
-            disabled={isSaving}
-          />
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-sm font-bold text-black mb-1.5" htmlFor="edit-title">
+              Task Title
+            </label>
+            <input
+              id="edit-title"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full px-4 py-3 rounded-2xl bg-[#F8F9FA] border-2 border-black text-black placeholder-gray-500
+                         focus:outline-none focus:bg-white transition-all duration-200 font-medium shadow-brutal-sm focus:shadow-brutal"
+              disabled={isSubmitting}
+            />
+          </div>
 
-        <div>
-          <label htmlFor="edit-description" className="block text-xs font-medium text-slate-400 mb-1.5">
-            Description
-          </label>
-          <textarea
-            id="edit-description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={4}
-            className="w-full px-3.5 py-2.5 rounded-lg resize-none bg-slate-800/70 border border-border-custom
-                       text-foreground placeholder-slate-500
-                       focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30
-                       transition-all duration-200 text-sm"
-            disabled={isSaving}
-          />
-        </div>
+          <div>
+            <label className="block text-sm font-bold text-black mb-1.5" htmlFor="edit-desc">
+              Description <span className="text-gray-500 font-medium text-xs">(optional)</span>
+            </label>
+            <textarea
+              id="edit-desc"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={4}
+              className="w-full px-4 py-3 rounded-2xl bg-[#F8F9FA] border-2 border-black text-black placeholder-gray-500
+                         focus:outline-none focus:bg-white transition-all duration-200 font-medium shadow-brutal-sm focus:shadow-brutal resize-none"
+              disabled={isSubmitting}
+            />
+          </div>
 
-        {error && (
-          <p className="text-red-400 text-xs bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>
-        )}
+          {error && (
+            <p className="text-[#E74C3C] text-sm font-bold bg-[#FCE5E2] border-2 border-[#E74C3C] px-3 py-2 rounded-xl shadow-brutal-sm">
+              {error}
+            </p>
+          )}
 
-        <div className="flex gap-2 pt-1">
-          <button
-            id="save-edit"
-            type="submit"
-            disabled={isSaving}
-            className="flex-1 px-4 py-2.5 rounded-lg font-medium text-sm
-                       bg-gradient-to-r from-blue-600 to-indigo-600
-                       hover:from-blue-500 hover:to-indigo-500
-                       text-white disabled:opacity-50 disabled:cursor-not-allowed
-                       transition-all duration-200 cursor-pointer"
-          >
-            {isSaving ? "Saving…" : "Save Changes"}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSaving}
-            className="px-4 py-2.5 rounded-lg font-medium text-sm
-                       bg-slate-800 hover:bg-slate-700 text-slate-300
-                       border border-border-custom transition-all duration-200 cursor-pointer"
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={isSubmitting}
+              className="px-5 py-2.5 rounded-xl font-bold text-black bg-white border-2 border-black
+                         shadow-brutal-sm hover:shadow-brutal hover:bg-gray-50 disabled:opacity-50
+                         active:shadow-none active:translate-y-1 active:translate-x-1 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-6 py-2.5 rounded-xl font-bold text-white bg-[#5EDA7F] border-2 border-black
+                         shadow-brutal-sm hover:shadow-brutal hover:bg-green-400 disabled:opacity-50
+                         active:shadow-none active:translate-y-1 active:translate-x-1 transition-all flex items-center justify-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-1 h-4 w-4 text-black" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span className="text-black">Saving...</span>
+                </>
+              ) : (
+                <span className="text-black inline-flex">Save Changes</span>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
