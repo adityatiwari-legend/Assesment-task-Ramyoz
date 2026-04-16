@@ -4,10 +4,10 @@ import { useState } from "react";
 import { CreateTaskPayload } from "@/types/task";
 
 interface TaskFormProps {
-  onTaskCreated: () => void;
+  onCreateTask: (payload: CreateTaskPayload) => Promise<void>;
 }
 
-export default function TaskForm({ onTaskCreated }: TaskFormProps) {
+export default function TaskForm({ onCreateTask }: TaskFormProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -31,22 +31,12 @@ export default function TaskForm({ onTaskCreated }: TaskFormProps) {
         ...(description.trim() && { description: description.trim() }),
       };
 
-      const res = await fetch("/api/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to create task");
-      }
+      await onCreateTask(payload);
 
       // Reset form and notify parent
       setTitle("");
       setDescription("");
       setIsOpen(false);
-      onTaskCreated();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
