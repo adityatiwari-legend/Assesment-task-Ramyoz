@@ -23,6 +23,7 @@ export default function TaskCard({ task, onEdit, onDelete, onMove }: TaskCardPro
 
   const style = {
     transform: CSS.Translate.toString(transform),
+    touchAction: "none" as const,
   };
 
   const nextStatuses = VALID_STATUS_TRANSITIONS[task.status];
@@ -32,7 +33,7 @@ export default function TaskCard({ task, onEdit, onDelete, onMove }: TaskCardPro
     <div
       ref={setNodeRef}
       style={style}
-      className={`group relative w-full bg-white rounded-2xl border-2 border-black p-5
+      className={`group relative w-full bg-white rounded-2xl border-2 border-black p-4 sm:p-5
                   shadow-brutal hover:shadow-brutal-lg transition-shadow duration-200
                   ${isDragging ? "opacity-60 scale-100 rotate-3 z-50 shadow-brutal-lg" : ""}
                   cursor-grab active:cursor-grabbing flex flex-col gap-4`}
@@ -41,7 +42,7 @@ export default function TaskCard({ task, onEdit, onDelete, onMove }: TaskCardPro
     >
       {/* Title + Actions */}
       <div className="flex items-start justify-between gap-3">
-        <h4 className="text-[15px] font-bold text-black leading-snug flex-1 break-words pb-1">
+        <h4 className="text-sm sm:text-[15px] font-bold text-black leading-snug flex-1 break-words pb-1">
           {task.title}
         </h4>
         <div className="flex gap-2 relative pointer-events-auto">
@@ -92,9 +93,34 @@ export default function TaskCard({ task, onEdit, onDelete, onMove }: TaskCardPro
          </div>
       </div>
 
+      {/* Mobile quick move actions */}
+      {nextStatuses.length > 0 && (
+        <div className="sm:hidden flex flex-col gap-2">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">
+            Quick Move
+          </p>
+          <div className="flex flex-wrap gap-2 pointer-events-auto">
+            {nextStatuses.map((nextStatus) => (
+              <button
+                key={nextStatus}
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMove(task.id, nextStatus);
+                }}
+                className={`px-3 py-1.5 rounded-full border-2 border-black text-xs font-bold shadow-brutal-sm active:shadow-none active:translate-y-1 active:translate-x-1 transition-all ${getMoveButtonColor(nextStatus)}`}
+              >
+                Move to {STATUS_LABELS[nextStatus]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Footer: Date and Users */}
-      <div className="flex items-center justify-between pt-2 mt-auto">
-        <div className="flex items-center gap-1.5 text-gray-500 font-semibold text-xs">
+      <div className="flex items-center justify-between pt-2 mt-auto gap-2">
+        <div className="flex items-center gap-1.5 text-gray-500 font-semibold text-[11px] sm:text-xs">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
@@ -103,9 +129,9 @@ export default function TaskCard({ task, onEdit, onDelete, onMove }: TaskCardPro
 
         {/* Mock Avatars matching the design */}
         <div className="flex -space-x-2">
-          <img className="w-6 h-6 rounded-full border-2 border-white bg-blue-100" src={`https://api.dicebear.com/7.x/notionists/svg?seed=${task.id}A`} alt="user" />
-          <img className="w-6 h-6 rounded-full border-2 border-white bg-green-100" src={`https://api.dicebear.com/7.x/notionists/svg?seed=${task.id}B`} alt="user" />
-          <div className="w-6 h-6 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-[8px] font-bold text-gray-600">
+          <img className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 border-white bg-blue-100" src={`https://api.dicebear.com/7.x/notionists/svg?seed=${task.id}A`} alt="user" />
+          <img className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 border-white bg-green-100" src={`https://api.dicebear.com/7.x/notionists/svg?seed=${task.id}B`} alt="user" />
+          <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-[8px] font-bold text-gray-600">
             2+
           </div>
         </div>
@@ -119,6 +145,12 @@ function getPillColor(status: TaskStatus, isFirst: boolean, seed: number) {
   const colors = ["bg-[#FDA4D4]", "bg-[#A8B8FE]", "bg-[#5EDA7F]", "bg-[#F5C77A]"];
   const select = (seed + (isFirst ? 0 : 1)) % colors.length;
   return colors[select];
+}
+
+function getMoveButtonColor(nextStatus: TaskStatus) {
+  if (nextStatus === "in_progress") return "bg-[#A8B8FE] hover:bg-[#95A8FF] text-black";
+  if (nextStatus === "completed") return "bg-[#5EDA7F] hover:bg-[#4DCE70] text-black";
+  return "bg-white hover:bg-gray-100 text-black";
 }
 
 function getRelativeTime(dateStr: string): string {

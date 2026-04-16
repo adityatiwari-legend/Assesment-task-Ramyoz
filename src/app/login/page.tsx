@@ -41,9 +41,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#EAE0FB] p-6">
-      <div className="w-full max-w-md bg-white border-4 border-black rounded-2xl p-8 shadow-[8px_8px_0px_#000000]">
-        <h1 className="text-3xl font-black mb-6 uppercase tracking-tight text-center">Login</h1>
+    <div className="min-h-screen flex items-center justify-center bg-[#EAE0FB] p-4 sm:p-6">
+      <div className="w-full max-w-md bg-white border-4 border-black rounded-2xl p-6 sm:p-8 shadow-[8px_8px_0px_#000000]">
+        <h1 className="text-2xl sm:text-3xl font-black mb-5 sm:mb-6 uppercase tracking-tight text-center">Login</h1>
         
         {error && (
           <div className="mb-4 p-3 bg-red-100 border-2 border-red-500 rounded-lg text-red-600 font-bold text-sm">
@@ -77,14 +77,14 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-4 px-6 bg-[#CABDFF] hover:bg-[#B9A3F8] text-black font-bold uppercase tracking-widest rounded-xl border-2 border-black shadow-[4px_4px_0px_#000000] active:shadow-none active:translate-y-1 active:translate-x-1 transition-all disabled:opacity-50"
+            className="w-full py-3.5 sm:py-4 px-6 bg-[#CABDFF] hover:bg-[#B9A3F8] text-black font-bold uppercase tracking-widest rounded-xl border-2 border-black shadow-[4px_4px_0px_#000000] active:shadow-none active:translate-y-1 active:translate-x-1 transition-all disabled:opacity-50"
           >
             {isLoading ? "Logging in..." : "Access Board"}
           </button>
         </form>
 
         <div className="mt-6 text-center text-sm font-medium">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link href="/register" className="text-blue-600 hover:underline font-bold">
             Create one
           </Link>
