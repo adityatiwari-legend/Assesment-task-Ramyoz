@@ -129,8 +129,12 @@ export default function TaskCard({ task, onEdit, onDelete, onMove }: TaskCardPro
 
         {/* Mock Avatars matching the design */}
         <div className="flex -space-x-2">
-          <img className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 border-white bg-blue-100" src={`https://api.dicebear.com/7.x/notionists/svg?seed=${task.id}A`} alt="user" />
-          <img className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 border-white bg-green-100" src={`https://api.dicebear.com/7.x/notionists/svg?seed=${task.id}B`} alt="user" />
+          <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 border-white bg-blue-100 flex items-center justify-center text-[8px] font-bold text-blue-700">
+            A
+          </div>
+          <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 border-white bg-green-100 flex items-center justify-center text-[8px] font-bold text-green-700">
+            B
+          </div>
           <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-[8px] font-bold text-gray-600">
             2+
           </div>

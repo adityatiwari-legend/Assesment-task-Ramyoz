@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -13,6 +13,7 @@ import {
   closestCenter,
 } from "@dnd-kit/core";
 import {
+  CreateTaskPayload,
   Task,
   TaskStatus,
   COLUMN_ORDER,
@@ -32,6 +33,13 @@ interface BoardProps {
   initialTasks: Task[];
 }
 
+function createOperationId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 export default function Board({ initialTasks }: BoardProps) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [searchQuery, setSearchQuery] = useState("");
@@ -43,7 +51,9 @@ export default function Board({ initialTasks }: BoardProps) {
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
-  const { user, logout } = useAuth();
+  const { user, loading: authLoading, logout } = useAuth();
+  const taskOperationsRef = useRef<Map<number, string>>(new Map());
+  const isHandlingUnauthorizedRef = useRef(false);
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -84,76 +94,346 @@ export default function Board({ initialTasks }: BoardProps) {
     return groups;
   }, [filteredTasks, sortOrder]);
 
+  const beginTaskOperation = useCallback((taskId: number): string => {
+    const operationId = createOperationId();
+    taskOperationsRef.current.set(taskId, operationId);
+    return operationId;
+  }, []);
+
+  const isTaskOperationActive = useCallback(
+    (taskId: number, operationId: string): boolean => {
+      return taskOperationsRef.current.get(taskId) === operationId;
+    },
+    []
+  );
+
+  const finishTaskOperation = useCallback((taskId: number, operationId: string) => {
+    if (taskOperationsRef.current.get(taskId) === operationId) {
+      taskOperationsRef.current.delete(taskId);
+    }
+  }, []);
+
+  const handleUnauthorized = useCallback(async () => {
+    if (isHandlingUnauthorizedRef.current) return;
+
+    isHandlingUnauthorizedRef.current = true;
+    showToast("Session expired. Please log in again.", "error");
+
+    try {
+      await logout();
+    } catch {
+      window.location.href = "/login";
+    } finally {
+      isHandlingUnauthorizedRef.current = false;
+    }
+  }, [logout]);
+
   const fetchTasks = useCallback(async () => {
     setIsRefreshing(true);
     try {
       const res = await fetch("/api/tasks");
-      if (!res.ok) throw new Error("Failed to fetch");
+
+      if (res.status === 401) {
+        await handleUnauthorized();
+        return;
+      }
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Failed to fetch");
+      }
+
       const data: Task[] = await res.json();
       setTasks(data);
-    } catch {
-      showToast("Failed to refresh tasks", "error");
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Failed to refresh tasks",
+        "error"
+      );
     } finally {
       setIsRefreshing(false);
     }
-  }, []);
+  }, [handleUnauthorized]);
+
+  const handleCreate = useCallback(
+    async (payload: CreateTaskPayload) => {
+      const nowIso = new Date().toISOString();
+      const tempId = -Date.now();
+      const optimisticTask: Task = {
+        id: tempId,
+        title: payload.title,
+        description: payload.description ?? null,
+        status: "pending",
+        created_at: nowIso,
+        updated_at: nowIso,
+      };
+
+      setTasks((prev) => [optimisticTask, ...prev]);
+
+      try {
+        const res = await fetch("/api/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (res.status === 401) {
+          setTasks((prev) => prev.filter((task) => task.id !== tempId));
+          await handleUnauthorized();
+          throw new Error("Session expired. Please log in again.");
+        }
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          throw new Error(data?.error || "Failed to create task");
+        }
+
+        const createdTask: Task = await res.json();
+        setTasks((prev) =>
+          prev.map((task) => (task.id === tempId ? createdTask : task))
+        );
+        showToast("Task created", "success");
+      } catch (err) {
+        setTasks((prev) => prev.filter((task) => task.id !== tempId));
+        throw err instanceof Error ? err : new Error("Failed to create task");
+      }
+    },
+    [handleUnauthorized]
+  );
 
   const handleMove = useCallback(
     async (taskId: number, newStatus: TaskStatus) => {
-      const prevTasks = [...tasks];
-      setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
+      const operationId = beginTaskOperation(taskId);
+      let previousStatus: TaskStatus | null = null;
+      let taskExists = false;
+
+      setTasks((prev) => {
+        const task = prev.find((t) => t.id === taskId);
+        if (!task) return prev;
+
+        taskExists = true;
+        previousStatus = task.status;
+
+        if (task.status === newStatus) return prev;
+
+        return prev.map((t) =>
+          t.id === taskId ? { ...t, status: newStatus } : t
+        );
+      });
+
+      if (!taskExists || previousStatus === null || previousStatus === newStatus) {
+        finishTaskOperation(taskId, operationId);
+        return;
+      }
+
       try {
         const res = await fetch(`/api/tasks/${taskId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: newStatus }),
         });
+
+        if (res.status === 401) {
+          if (isTaskOperationActive(taskId, operationId)) {
+            setTasks((prev) =>
+              prev.map((t) =>
+                t.id === taskId ? { ...t, status: previousStatus as TaskStatus } : t
+              )
+            );
+          }
+          await handleUnauthorized();
+          return;
+        }
+
         if (!res.ok) {
-          const data = await res.json();
+          const data = await res.json().catch(() => null);
           throw new Error(data.error || "Failed to move task");
         }
+
         const updated: Task = await res.json();
+
+        if (!isTaskOperationActive(taskId, operationId)) return;
+
         setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
       } catch (err) {
-        setTasks(prevTasks);
+        if (isTaskOperationActive(taskId, operationId)) {
+          setTasks((prev) =>
+            prev.map((t) =>
+              t.id === taskId ? { ...t, status: previousStatus as TaskStatus } : t
+            )
+          );
+        }
+
         showToast(err instanceof Error ? err.message : "Failed to move task", "error");
+      } finally {
+        finishTaskOperation(taskId, operationId);
       }
     },
-    [tasks]
+    [
+      beginTaskOperation,
+      finishTaskOperation,
+      handleUnauthorized,
+      isTaskOperationActive,
+    ]
   );
 
   const handleEdit = useCallback(
     async (taskId: number, title: string, description: string) => {
-      const res = await fetch(`/api/tasks/${taskId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description }),
+      const operationId = beginTaskOperation(taskId);
+      let previousTask: Pick<Task, "title" | "description"> | null = null;
+      let taskExists = false;
+
+      setTasks((prev) => {
+        const task = prev.find((t) => t.id === taskId);
+        if (!task) return prev;
+
+        taskExists = true;
+        previousTask = { title: task.title, description: task.description };
+
+        return prev.map((t) =>
+          t.id === taskId
+            ? { ...t, title, description: description || null }
+            : t
+        );
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to update task");
+
+      if (!taskExists || !previousTask) {
+        finishTaskOperation(taskId, operationId);
+        throw new Error("Task not found");
       }
-      const updated: Task = await res.json();
-      setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
-      showToast("Task updated", "success");
+
+      try {
+        const res = await fetch(`/api/tasks/${taskId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, description }),
+        });
+
+        if (res.status === 401) {
+          if (isTaskOperationActive(taskId, operationId)) {
+            setTasks((prev) =>
+              prev.map((t) =>
+                t.id === taskId
+                  ? {
+                      ...t,
+                      title: previousTask!.title,
+                      description: previousTask!.description,
+                    }
+                  : t
+              )
+            );
+          }
+          await handleUnauthorized();
+          return;
+        }
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          throw new Error(data?.error || "Failed to update task");
+        }
+
+        const updated: Task = await res.json();
+
+        if (!isTaskOperationActive(taskId, operationId)) return;
+
+        setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
+        showToast("Task updated", "success");
+      } catch (err) {
+        if (isTaskOperationActive(taskId, operationId)) {
+          setTasks((prev) =>
+            prev.map((t) =>
+              t.id === taskId
+                ? {
+                    ...t,
+                    title: previousTask!.title,
+                    description: previousTask!.description,
+                  }
+                : t
+            )
+          );
+        }
+        throw err instanceof Error ? err : new Error("Failed to update task");
+      } finally {
+        finishTaskOperation(taskId, operationId);
+      }
     },
-    []
+    [
+      beginTaskOperation,
+      finishTaskOperation,
+      handleUnauthorized,
+      isTaskOperationActive,
+    ]
   );
 
   const handleDelete = useCallback(
     async (taskId: number) => {
-      const prevTasks = [...tasks];
-      setTasks((prev) => prev.filter((t) => t.id !== taskId));
+      const operationId = beginTaskOperation(taskId);
+      let removedTask: Task | null = null;
+      let removedIndex = -1;
+
+      setTasks((prev) => {
+        removedIndex = prev.findIndex((t) => t.id === taskId);
+        if (removedIndex === -1) return prev;
+
+        removedTask = prev[removedIndex];
+        return prev.filter((t) => t.id !== taskId);
+      });
+
+      if (!removedTask || removedIndex < 0) {
+        finishTaskOperation(taskId, operationId);
+        return;
+      }
+
       try {
         const res = await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
-        if (!res.ok) throw new Error("Failed to delete");
+
+        if (res.status === 401) {
+          if (isTaskOperationActive(taskId, operationId)) {
+            setTasks((prev) => {
+              const exists = prev.some((t) => t.id === removedTask!.id);
+              if (exists) return prev;
+
+              const next = [...prev];
+              next.splice(Math.min(removedIndex, next.length), 0, removedTask!);
+              return next;
+            });
+          }
+          await handleUnauthorized();
+          return;
+        }
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          throw new Error(data?.error || "Failed to delete task");
+        }
+
         showToast("Task deleted", "success");
-      } catch {
-        setTasks(prevTasks);
-        showToast("Failed to delete task", "error");
+      } catch (err) {
+        if (isTaskOperationActive(taskId, operationId)) {
+          setTasks((prev) => {
+            const exists = prev.some((t) => t.id === removedTask!.id);
+            if (exists) return prev;
+
+            const next = [...prev];
+            next.splice(Math.min(removedIndex, next.length), 0, removedTask!);
+            return next;
+          });
+        }
+
+        showToast(
+          err instanceof Error ? err.message : "Failed to delete task",
+          "error"
+        );
+      } finally {
+        finishTaskOperation(taskId, operationId);
       }
     },
-    [tasks]
+    [
+      beginTaskOperation,
+      finishTaskOperation,
+      handleUnauthorized,
+      isTaskOperationActive,
+    ]
   );
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -264,7 +544,11 @@ export default function Board({ initialTasks }: BoardProps) {
                     </div>
                   </div>
                   
-                  {user && (
+                  {authLoading ? (
+                    <div className="flex w-full sm:w-auto items-center gap-2 px-4 py-2 bg-white border-2 border-black rounded-full shadow-brutal-sm font-bold animate-pulse">
+                      Checking session...
+                    </div>
+                  ) : user ? (
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:ml-2 sm:pl-4 sm:border-l-2 sm:border-black w-full sm:w-auto">
                       <div className="flex w-full sm:w-auto items-center gap-2 px-4 py-2 bg-white border-2 border-black rounded-full shadow-brutal-sm font-bold truncate max-w-full sm:max-w-[170px]">
                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0"></div>
@@ -277,7 +561,7 @@ export default function Board({ initialTasks }: BoardProps) {
                         Logout
                       </button>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -308,7 +592,7 @@ export default function Board({ initialTasks }: BoardProps) {
         </DragOverlay>
       </DndContext>
 
-      <TaskForm onTaskCreated={fetchTasks} />
+      <TaskForm onCreateTask={handleCreate} />
 
       {editingTask && (
         <EditModal task={editingTask} onClose={() => setEditingTask(null)} onSave={handleEdit} />
