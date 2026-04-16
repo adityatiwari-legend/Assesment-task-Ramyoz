@@ -14,28 +14,31 @@ interface ColumnProps {
 
 const COLUMN_STYLES: Record<
   TaskStatus,
-  { accent: string; bg: string; border: string; dot: string; dropHighlight: string }
+  { accent: string; bg: string; border: string; dot: string; dropHighlight: string; pillColor: string }
 > = {
   pending: {
-    accent: "text-pending",
-    bg: "bg-pending-bg",
-    border: "border-pending-border",
-    dot: "bg-amber-400",
-    dropHighlight: "border-amber-400/40 bg-amber-400/5",
+    accent: "text-black",
+    bg: "bg-[#F8F9FA]/50",
+    border: "border-transparent",
+    dot: "bg-pending",
+    dropHighlight: "bg-pending/20 border-pending border-2 border-dashed",
+    pillColor: "bg-pending",
   },
   in_progress: {
-    accent: "text-in-progress",
-    bg: "bg-in-progress-bg",
-    border: "border-in-progress-border",
-    dot: "bg-blue-400",
-    dropHighlight: "border-blue-400/40 bg-blue-400/5",
+    accent: "text-black",
+    bg: "bg-[#F8F9FA]/50",
+    border: "border-transparent",
+    dot: "bg-in-progress",
+    dropHighlight: "bg-in-progress/20 border-in-progress border-2 border-dashed",
+    pillColor: "bg-in-progress",
   },
   completed: {
-    accent: "text-completed",
-    bg: "bg-completed-bg",
-    border: "border-completed-border",
-    dot: "bg-emerald-400",
-    dropHighlight: "border-emerald-400/40 bg-emerald-400/5",
+    accent: "text-black",
+    bg: "bg-[#F8F9FA]/50",
+    border: "border-transparent",
+    dot: "bg-completed",
+    dropHighlight: "bg-completed/20 border-completed border-2 border-dashed",
+    pillColor: "bg-completed",
   },
 };
 
@@ -50,45 +53,38 @@ export default function Column({ status, tasks, onEdit, onDelete, onMove }: Colu
   return (
     <div
       ref={setNodeRef}
-      className={`flex flex-col min-h-[400px] rounded-2xl border transition-all duration-300
+      className={`flex flex-col min-h-[500px] rounded-[32px] transition-all duration-300 relative
                   ${isOver ? styles.dropHighlight : `${styles.bg} ${styles.border}`}`}
     >
-      {/* Column Header */}
-      <div className="flex items-center gap-2.5 px-5 py-4 border-b border-inherit">
-        <span className={`w-2.5 h-2.5 rounded-full ${styles.dot} shadow-sm`} />
-        <h2 className={`text-sm font-bold uppercase tracking-wider ${styles.accent}`}>
-          {STATUS_LABELS[status]}
-        </h2>
-        <span
-          className="ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full
-                       bg-slate-800 text-slate-400 border border-border-custom"
+      {/* Column Header - Pills style */}
+      <div className="flex items-center justify-between px-6 py-5">
+        <div className="flex items-center gap-3">
+          <div className={`px-4 py-1.5 rounded-full border-2 border-black font-bold text-sm ${styles.pillColor} shadow-brutal-sm`}>
+            {STATUS_LABELS[status]}
+          </div>
+        </div>
+        <div
+          className="text-xs font-bold px-3 py-1.5 rounded-full
+                       bg-white text-black border-2 border-black shadow-brutal-sm"
         >
           {tasks.length}
-        </span>
+        </div>
       </div>
 
       {/* Task List */}
-      <div className="flex-1 p-3 space-y-3 overflow-y-auto">
+      <div className="flex-1 p-4 pt-1 space-y-4 overflow-y-auto">
         {tasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-center opacity-50">
-            <svg
-              className="w-10 h-10 text-slate-600 mb-3"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-              />
-            </svg>
-            <p className="text-xs text-slate-500 font-medium">No tasks yet</p>
-            <p className="text-[10px] text-slate-600 mt-1">
+          <div className="flex flex-col items-center justify-center h-full min-h-[250px] text-center opacity-60">
+            <div className="w-16 h-16 bg-white border-2 border-black border-dashed rounded-full flex items-center justify-center mb-4">
+               <svg className="w-6 h-6 text-black/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+               </svg>
+            </div>
+            <p className="text-sm font-bold text-black">No tasks here</p>
+            <p className="text-xs text-black/60 mt-1 max-w-[150px]">
               {status === "pending"
-                ? "Create a new task to get started"
-                : "Drag tasks here or use the move button"}
+                ? "Click the pink + button to create a task"
+                : "Drag tasks here"}
             </p>
           </div>
         ) : (

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
 import { Task } from "@/types/task";
+import { useState, useEffect } from "react";
 
 interface DeleteConfirmModalProps {
   task: Task;
@@ -15,86 +15,75 @@ export default function DeleteConfirmModal({
   onConfirm,
 }: DeleteConfirmModalProps) {
   const [isDeleting, setIsDeleting] = useState(false);
-  const overlayRef = useRef<HTMLDivElement>(null);
+  const [isClosing, setIsClosing] = useState(false);
 
+  // Focus trap workaround
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "unset";
     };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [onClose]);
+  }, []);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(onClose, 200);
+  };
 
   const handleConfirm = async () => {
     setIsDeleting(true);
-    try {
-      await onConfirm(task.id);
-      onClose();
-    } catch {
-      setIsDeleting(false);
-    }
+    await onConfirm(task.id);
+    handleClose();
   };
 
   return (
-    <div
-      ref={overlayRef}
-      onClick={(e) => e.target === overlayRef.current && onClose()}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4
-                 bg-black/60 modal-backdrop"
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+      <div 
+        className="absolute inset-0 bg-transparent"
+        onClick={handleClose} 
+      />
       <div
-        className="w-full max-w-sm rounded-2xl border border-red-500/20
-                   bg-slate-900 p-6 space-y-4 shadow-2xl shadow-black/40"
-        onClick={(e) => e.stopPropagation()}
+        className={`relative w-full max-w-sm bg-white rounded-[32px] border-2 border-black p-6
+                   shadow-brutal-lg transition-all duration-200 text-center
+                   ${isClosing ? "opacity-0 scale-95" : "animate-in fade-in zoom-in-95"}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-modal-title"
       >
-        {/* Warning icon */}
-        <div className="flex items-center justify-center">
-          <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
-            <svg
-              className="w-6 h-6 text-red-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
-              />
-            </svg>
-          </div>
+        <div className="w-16 h-16 mx-auto bg-[#FCE5E2] border-2 border-[#E74C3C] text-[#E74C3C] rounded-full flex items-center justify-center mb-4 shadow-brutal-sm">
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
         </div>
+        
+        <h3 id="delete-modal-title" className="text-2xl font-black text-black mb-2">
+          Delete Task?
+        </h3>
+        <p className="text-sm font-medium text-gray-500 mb-6">
+           This will permanently delete "{task.title}".<br />
+           It cannot be undone.
+        </p>
 
-        <div className="text-center space-y-2">
-          <h3 className="text-base font-bold text-foreground">Delete Task?</h3>
-          <p className="text-sm text-slate-400">
-            This will permanently delete{" "}
-            <span className="font-semibold text-slate-300">&quot;{task.title}&quot;</span>.
-            This action cannot be undone.
-          </p>
-        </div>
-
-        <div className="flex gap-2 pt-2">
+        <div className="flex justify-center gap-3">
           <button
-            onClick={onClose}
+            type="button"
+            onClick={handleClose}
             disabled={isDeleting}
-            className="flex-1 px-4 py-2.5 rounded-lg font-medium text-sm
-                       bg-slate-800 hover:bg-slate-700 text-slate-300
-                       border border-border-custom transition-all duration-200 cursor-pointer"
+            className="flex-1 max-w-[120px] py-3 rounded-2xl font-bold text-black bg-white border-2 border-black
+                       shadow-brutal-sm hover:shadow-brutal hover:bg-gray-50 disabled:opacity-50
+                       active:shadow-none active:translate-y-1 active:translate-x-1 transition-all"
           >
             Cancel
           </button>
           <button
-            id="confirm-delete"
+            type="button"
             onClick={handleConfirm}
             disabled={isDeleting}
-            className="flex-1 px-4 py-2.5 rounded-lg font-medium text-sm
-                       bg-red-600 hover:bg-red-500 text-white
-                       disabled:opacity-50 disabled:cursor-not-allowed
-                       transition-all duration-200 cursor-pointer"
+            className="flex-1 max-w-[120px] py-3 rounded-2xl font-bold text-white bg-[#E74C3C] border-2 border-black
+                       shadow-brutal-sm hover:shadow-brutal hover:bg-red-600 disabled:opacity-50
+                       active:shadow-none active:translate-y-1 active:translate-x-1 transition-all flex items-center justify-center gap-2"
           >
-            {isDeleting ? "Deleting…" : "Delete"}
+            {isDeleting ? "Deleting..." : "Delete"}
           </button>
         </div>
       </div>
