@@ -6,6 +6,7 @@ import {
   UpdateTaskPayload,
   VALID_STATUS_TRANSITIONS,
 } from "@/types/task";
+import { getSession } from "@/lib/auth";
 
 // Allowed status values for runtime validation
 const VALID_STATUSES: TaskStatus[] = ["pending", "in_progress", "completed"];
@@ -21,6 +22,11 @@ export async function PUT(
 ) {
   try {
     await initializeDatabase();
+    
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const { id } = await params;
     const taskId = parseInt(id, 10);
@@ -34,10 +40,10 @@ export async function PUT(
 
     const body: UpdateTaskPayload = await request.json();
 
-    // Fetch the current task to validate status transitions
+    // Fetch the current task and ensure it belongs to the user
     const existing = await pool.query<Task>(
-      "SELECT * FROM tasks WHERE id = $1",
-      [taskId]
+      "SELECT * FROM tasks WHERE id = $1 AND user_id = $2",
+      [taskId, session.userId]
     );
 
     if (existing.rows.length === 0) {
@@ -129,6 +135,11 @@ export async function DELETE(
 ) {
   try {
     await initializeDatabase();
+    
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const { id } = await params;
     const taskId = parseInt(id, 10);
@@ -141,8 +152,8 @@ export async function DELETE(
     }
 
     const result = await pool.query<Task>(
-      "DELETE FROM tasks WHERE id = $1 RETURNING *",
-      [taskId]
+      "DELETE FROM tasks WHERE id = $1 AND user_id = $2 RETURNING *",
+      [taskId, session.userId]
     );
 
     if (result.rows.length === 0) {

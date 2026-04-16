@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { pool, initializeDatabase } from "@/lib/db";
 import { Task, CreateTaskPayload } from "@/types/task";
+import { getSession } from "@/lib/auth";
 
 /**
  * GET /api/tasks
@@ -9,9 +10,15 @@ import { Task, CreateTaskPayload } from "@/types/task";
 export async function GET() {
   try {
     await initializeDatabase();
+    
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const result = await pool.query<Task>(
-      "SELECT * FROM tasks ORDER BY created_at DESC"
+      "SELECT * FROM tasks WHERE user_id = $1 ORDER BY created_at DESC",
+      [session.userId]
     );
 
     return NextResponse.json(result.rows, { status: 200 });
@@ -45,12 +52,17 @@ export async function POST(request: NextRequest) {
 
     const title = body.title.trim();
     const description = body.description?.trim() || null;
+    
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const result = await pool.query<Task>(
-      `INSERT INTO tasks (title, description, status)
-       VALUES ($1, $2, 'pending')
+      `INSERT INTO tasks (title, description, status, user_id)
+       VALUES ($1, $2, 'pending', $3)
        RETURNING *`,
-      [title, description]
+      [title, description, session.userId]
     );
 
     return NextResponse.json(result.rows[0], { status: 201 });

@@ -1,6 +1,8 @@
 import { pool, initializeDatabase } from "@/lib/db";
 import { Task } from "@/types/task";
 import Board from "@/components/Board";
+import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 // Server Component — fetches initial data at request time
 export const dynamic = "force-dynamic";
@@ -9,10 +11,17 @@ export default async function Home() {
   let tasks: Task[] = [];
   let fetchError: string | null = null;
 
+  const session = await getSession();
+  if (!session) {
+    redirect("/login");
+  }
+
   try {
     await initializeDatabase();
+
     const result = await pool.query<Task>(
-      "SELECT * FROM tasks ORDER BY created_at DESC"
+      "SELECT * FROM tasks WHERE user_id = $1 ORDER BY created_at DESC",
+      [session.userId]
     );
     tasks = result.rows;
   } catch (err) {

@@ -44,14 +44,46 @@ export async function initializeDatabase(): Promise<void> {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id            SERIAL PRIMARY KEY,
+      username      VARCHAR(255) UNIQUE NOT NULL,
+      password_hash VARCHAR(255) NOT NULL,
+      first_name    VARCHAR(255) DEFAULT '',
+      last_name     VARCHAR(255) DEFAULT '',
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS tasks (
       id            SERIAL PRIMARY KEY,
       title         TEXT NOT NULL,
       description   TEXT,
       status        task_status NOT NULL DEFAULT 'pending',
+      user_id       INTEGER REFERENCES users(id) ON DELETE CASCADE,
       created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+  `);
+
+  // Add user_id to existing tasks table if it doesn't exist
+  // Add user_id to existing tasks table if it doesn't exist
+  await pool.query(`
+    DO $$ BEGIN
+      ALTER TABLE tasks ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;
+    EXCEPTION
+      WHEN duplicate_column THEN NULL;
+    END $$;
+  `);
+
+  // Add first_name and last_name to existing users table
+  await pool.query(`
+    DO $$ BEGIN
+      ALTER TABLE users ADD COLUMN first_name VARCHAR(255) DEFAULT '';
+      ALTER TABLE users ADD COLUMN last_name VARCHAR(255) DEFAULT '';
+    EXCEPTION
+      WHEN duplicate_column THEN NULL;
+    END $$;
   `);
 
   // Auto-update `updated_at` on row modification
