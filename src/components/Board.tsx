@@ -25,6 +25,7 @@ import EditModal from "./EditModal";
 import DeleteConfirmModal from "./DeleteConfirmModal";
 import SearchBar from "./SearchBar";
 import ToastContainer, { showToast } from "./ToastContainer";
+import { useAuth } from "@/components/AuthProvider";
 
 interface BoardProps {
   initialTasks: Task[];
@@ -38,6 +39,8 @@ export default function Board({ initialTasks }: BoardProps) {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+
+  const { user, logout } = useAuth();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -191,29 +194,46 @@ export default function Board({ initialTasks }: BoardProps) {
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
                   <SearchBar value={searchQuery} onChange={setSearchQuery} />
                   
-                  <button
-                    onClick={fetchTasks}
-                    disabled={isRefreshing}
-                    className="w-12 h-12 flex-shrink-0 rounded-full border-2 border-black bg-white
-                               hover:bg-gray-100 flex items-center justify-center shadow-brutal-sm
-                               active:translate-y-1 active:translate-x-1 active:shadow-none transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    <svg className={`w-5 h-5 text-black ${isRefreshing ? "animate-spin" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                  </button>
-                  <button
-                    className="w-12 h-12 flex-shrink-0 rounded-full border-2 border-black bg-white
-                               hover:bg-gray-100 flex items-center justify-center shadow-brutal-sm
-                               active:translate-y-1 active:translate-x-1 active:shadow-none transition-all cursor-pointer"
-                  >
-                    <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                    </svg>
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={fetchTasks}
+                      disabled={isRefreshing}
+                      className="w-12 h-12 flex-shrink-0 rounded-full border-2 border-black bg-white
+                                 hover:bg-gray-100 flex items-center justify-center shadow-brutal-sm
+                                 active:translate-y-1 active:translate-x-1 active:shadow-none transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      <svg className={`w-5 h-5 text-black ${isRefreshing ? "animate-spin" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </button>
+                    <button
+                      className="w-12 h-12 flex-shrink-0 rounded-full border-2 border-black bg-white
+                                 hover:bg-gray-100 flex items-center justify-center shadow-brutal-sm
+                                 active:translate-y-1 active:translate-x-1 active:shadow-none transition-all cursor-pointer"
+                    >
+                      <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  {user && (
+                    <div className="flex items-center justify-between sm:justify-start gap-3 sm:ml-2 sm:pl-4 sm:border-l-2 sm:border-black w-full sm:w-auto">
+                      <div className="flex flex-1 sm:flex-none items-center gap-2 px-4 py-2 bg-white border-2 border-black rounded-full shadow-brutal-sm font-bold truncate max-w-[200px] sm:max-w-[150px]">
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0"></div>
+                        <span className="truncate">{user.username}</span>
+                      </div>
+                      <button
+                        onClick={logout}
+                        className="px-4 py-2 border-2 border-black bg-[#FDA4D4] hover:bg-[#F970B5] text-black font-bold uppercase tracking-wide rounded-full shadow-brutal-sm active:translate-y-1 active:translate-x-1 active:shadow-none transition-all cursor-pointer whitespace-nowrap"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
