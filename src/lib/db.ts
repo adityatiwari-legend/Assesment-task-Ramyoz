@@ -49,6 +49,8 @@ export async function initializeDatabase(): Promise<void> {
       title         TEXT NOT NULL,
       description   TEXT,
       status        task_status NOT NULL DEFAULT 'pending',
+      user_id       INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      tags          TEXT[] DEFAULT '{}',
       created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
@@ -57,6 +59,8 @@ export async function initializeDatabase(): Promise<void> {
 
   // Add user_id to existing tasks table if it doesn't exist
   // Add user_id to existing tasks table if it doesn't exist
+  await pool.query(`
+    DO $$ BEGIN
       ALTER TABLE tasks ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;
     EXCEPTION
       WHEN duplicate_column THEN NULL;
