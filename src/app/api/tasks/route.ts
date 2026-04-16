@@ -45,12 +45,13 @@ export async function POST(request: NextRequest) {
 
     const title = body.title.trim();
     const description = body.description?.trim() || null;
+    const tags = body.tags || [];
 
     const result = await pool.query<Task>(
-      `INSERT INTO tasks (title, description, status)
-       VALUES ($1, $2, 'pending')
+      `INSERT INTO tasks (title, description, status, tags)
+       VALUES ($1, $2, 'pending', $3)
        RETURNING *`,
-      [title, description]
+      [title, description, tags]
     );
 
     return NextResponse.json(result.rows[0], { status: 201 });

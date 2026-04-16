@@ -7,6 +7,7 @@ export interface Task {
   title: string;
   description: string | null;
   status: TaskStatus;
+  tags: string[];
   created_at: string;
   updated_at: string;
 }
@@ -15,6 +16,7 @@ export interface Task {
 export interface CreateTaskPayload {
   title: string;
   description?: string;
+  tags?: string[];
 }
 
 // Payload for updating a task (PUT)
@@ -22,6 +24,7 @@ export interface UpdateTaskPayload {
   title?: string;
   description?: string;
   status?: TaskStatus;
+  tags?: string[];
 }
 
 // Valid status transitions (enforced server-side)

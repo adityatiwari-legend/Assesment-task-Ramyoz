@@ -54,6 +54,35 @@ export async function initializeDatabase(): Promise<void> {
     );
   `);
 
+
+  // Add user_id to existing tasks table if it doesn't exist
+  // Add user_id to existing tasks table if it doesn't exist
+      ALTER TABLE tasks ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;
+    EXCEPTION
+      WHEN duplicate_column THEN NULL;
+    END $$;
+  `);
+
+  // Add first_name and last_name to existing users table
+  await pool.query(`
+    DO $$ BEGIN
+      ALTER TABLE users ADD COLUMN first_name VARCHAR(255) DEFAULT '';
+      ALTER TABLE users ADD COLUMN last_name VARCHAR(255) DEFAULT '';
+    EXCEPTION
+      WHEN duplicate_column THEN NULL;
+    END $$;
+  `);
+
+  // Add tags to existing tasks table
+  await pool.query(`
+    DO $$ BEGIN
+      ALTER TABLE tasks ADD COLUMN tags TEXT[] DEFAULT '{}';
+    EXCEPTION
+      WHEN duplicate_column THEN NULL;
+    END $$;
+  `);
+
+
   // Auto-update `updated_at` on row modification
   await pool.query(`
     CREATE OR REPLACE FUNCTION update_updated_at_column()

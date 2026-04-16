@@ -46,7 +46,7 @@ export default async function Home() {
           <p className="text-sm text-slate-400 leading-relaxed">{fetchError}</p>
           <div className="bg-slate-800/60 rounded-lg p-4 text-left">
             <p className="text-xs text-slate-500 font-mono">
-              DATABASE_URL=postgresql://user:pass@localhost:5432/kanban
+              DATABASE_URL=
             </p>
           </div>
         </div>

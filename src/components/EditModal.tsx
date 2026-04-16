@@ -6,12 +6,14 @@ import { Task } from "@/types/task";
 interface EditModalProps {
   task: Task;
   onClose: () => void;
-  onSave: (taskId: number, title: string, description: string) => Promise<void>;
+  onSave: (taskId: number, title: string, description: string, tags: string[]) => Promise<void>;
 }
 
 export default function EditModal({ task, onClose, onSave }: EditModalProps) {
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || "");
+  const [tags, setTags] = useState<string[]>(task.tags || []);
+  const [tagInput, setTagInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isClosing, setIsClosing] = useState(false);
@@ -39,7 +41,7 @@ export default function EditModal({ task, onClose, onSave }: EditModalProps) {
     setIsSubmitting(true);
 
     try {
-      await onSave(task.id, title.trim(), description.trim());
+      await onSave(task.id, title.trim(), description.trim(), tags);
       handleClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update task");
@@ -95,11 +97,47 @@ export default function EditModal({ task, onClose, onSave }: EditModalProps) {
               id="edit-desc"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              rows={4}
+              rows={3}
               className="w-full px-4 py-3 rounded-2xl bg-[#F8F9FA] border-2 border-black text-black placeholder-gray-500
                          focus:outline-none focus:bg-white transition-all duration-200 font-medium shadow-brutal-sm focus:shadow-brutal resize-none"
               disabled={isSubmitting}
             />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-bold text-black mb-1.5" htmlFor="edit-tags">
+              Tags <span className="text-gray-500 font-medium text-xs">(optional)</span>
+            </label>
+            <input
+              id="edit-tags"
+              type="text"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ',') {
+                  e.preventDefault();
+                  const trimmed = tagInput.trim();
+                  if (trimmed && !tags.includes(trimmed)) {
+                    setTags([...tags, trimmed]);
+                  }
+                  setTagInput("");
+                }
+              }}
+              placeholder="Type and press Enter..."
+              className="w-full px-4 py-2 rounded-xl bg-[#F8F9FA] border-2 border-black text-black placeholder-gray-500
+                         focus:outline-none focus:bg-white transition-all duration-200 font-medium shadow-brutal-sm focus:shadow-brutal"
+              disabled={isSubmitting}
+            />
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {tags.map(t => (
+                  <span key={t} className="flex items-center gap-1 px-2 py-1 text-sm font-bold bg-[#A8B8FE] border-2 border-black rounded-full">
+                    {t}
+                    <button type="button" onClick={() => setTags(tags.filter(xt => xt !== t))} className="text-black hover:text-red-600">&times;</button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {error && (

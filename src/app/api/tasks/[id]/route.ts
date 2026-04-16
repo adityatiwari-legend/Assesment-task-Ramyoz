@@ -79,7 +79,7 @@ export async function PUT(
 
     // Build dynamic UPDATE query based on provided fields
     const updates: string[] = [];
-    const values: (string | null)[] = [];
+    const values: any[] = [];
     let paramIndex = 1;
 
     if (body.title !== undefined) {
@@ -95,6 +95,11 @@ export async function PUT(
     if (body.status !== undefined) {
       updates.push(`status = $${paramIndex++}`);
       values.push(body.status);
+    }
+    
+    if (body.tags !== undefined) {
+      updates.push(`tags = $${paramIndex++}`);
+      values.push(body.tags);
     }
 
     if (updates.length === 0) {

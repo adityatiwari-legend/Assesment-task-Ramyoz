@@ -75,15 +75,15 @@ export default function TaskCard({ task, onEdit, onDelete, onMove }: TaskCardPro
       )}
 
       {/* Tags Row */}
-      <div className="flex flex-wrap items-center gap-2">
-         {/* Prioritize tag logic (just visual mock for the UI theme mapping) */}
-         <div className={`px-2.5 py-1 text-[10px] font-bold rounded-full border border-black ${getPillColor(task.status, true, task.id)}`}>
-           {task.id % 2 === 0 ? "High" : task.id % 3 === 0 ? "Medium" : "Low"}
-         </div>
-         <div className={`px-2.5 py-1 text-[10px] font-bold rounded-full border border-black ${getPillColor(task.status, false, task.id)}`}>
-           {task.id % 2 !== 0 ? "On Track" : "At Risk"}
-         </div>
-      </div>
+      {task.tags && task.tags.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {task.tags.map((tag, index) => (
+            <div key={`${tag}-${index}`} className={`px-2.5 py-1 text-[10px] font-bold rounded-full border border-black ${getPillColor(task.status, index === 0, task.id + index)}`}>
+              {tag}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Footer: Date and Users */}
       <div className="flex items-center justify-between pt-2 mt-auto">

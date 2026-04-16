@@ -11,8 +11,24 @@ export default function TaskForm({ onTaskCreated }: TaskFormProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const predefinedTags = ["On Time", "Very Imp", "Low", "High"];
+
+  const handleAddTag = (tag: string) => {
+    const trimmed = tag.trim();
+    if (trimmed && !tags.includes(trimmed)) {
+      setTags([...tags, trimmed]);
+    }
+    setTagInput("");
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter(t => t !== tagToRemove));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +45,7 @@ export default function TaskForm({ onTaskCreated }: TaskFormProps) {
       const payload: CreateTaskPayload = {
         title: title.trim(),
         ...(description.trim() && { description: description.trim() }),
+        tags: tags,
       };
 
       const res = await fetch("/api/tasks", {
@@ -45,6 +62,8 @@ export default function TaskForm({ onTaskCreated }: TaskFormProps) {
       // Reset form and notify parent
       setTitle("");
       setDescription("");
+      setTags([]);
+      setTagInput("");
       setIsOpen(false);
       onTaskCreated();
     } catch (err) {
@@ -115,11 +134,55 @@ export default function TaskForm({ onTaskCreated }: TaskFormProps) {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Add some details..."
-                rows={3}
+                rows={2}
                 className="w-full px-4 py-3 rounded-2xl bg-[#F8F9FA] border-2 border-black text-black placeholder-gray-500
                            focus:outline-none focus:bg-white transition-all duration-200 font-medium shadow-brutal-sm focus:shadow-brutal resize-none"
                 disabled={isSubmitting}
               />
+            </div>
+            
+            <div>
+              <label htmlFor="task-tags" className="block text-sm font-bold text-black mb-1.5">
+                Tags <span className="text-gray-500 font-medium text-xs">(optional)</span>
+              </label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {predefinedTags.map(pt => (
+                  <button 
+                    key={pt} 
+                    type="button"
+                    onClick={() => handleAddTag(pt)}
+                    className="px-2 py-1 text-xs font-bold bg-[#A8B8FE] border border-black rounded-lg hover:shadow-brutal-sm"
+                  >
+                    + {pt}
+                  </button>
+                ))}
+              </div>
+              <input
+                id="task-tags"
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault();
+                    handleAddTag(tagInput);
+                  }
+                }}
+                placeholder="Type and press Enter..."
+                className="w-full px-4 py-2 rounded-xl bg-[#F8F9FA] border-2 border-black text-black placeholder-gray-500
+                           focus:outline-none focus:bg-white transition-all duration-200 font-medium shadow-brutal-sm focus:shadow-brutal"
+                disabled={isSubmitting}
+              />
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {tags.map(t => (
+                    <span key={t} className="flex items-center gap-1 px-2 py-1 text-sm font-bold bg-[#FDA4D4] border-2 border-black rounded-full">
+                      {t}
+                      <button type="button" onClick={() => removeTag(t)} className="text-black hover:text-red-600">&times;</button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             {error && (
