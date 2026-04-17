@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -52,8 +52,13 @@ export default function Board({ initialTasks }: BoardProps) {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
   const { user, loading: authLoading, logout } = useAuth();
+  const tasksRef = useRef<Task[]>(initialTasks);
   const taskOperationsRef = useRef<Map<number, string>>(new Map());
   const isHandlingUnauthorizedRef = useRef(false);
+
+  useEffect(() => {
+    tasksRef.current = tasks;
+  }, [tasks]);
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -204,27 +209,20 @@ export default function Board({ initialTasks }: BoardProps) {
   const handleMove = useCallback(
     async (taskId: number, newStatus: TaskStatus) => {
       const operationId = beginTaskOperation(taskId);
-      let previousStatus: TaskStatus | null = null;
-      let taskExists = false;
+      const existingTask = tasksRef.current.find((task) => task.id === taskId);
 
-      setTasks((prev) => {
-        const task = prev.find((t) => t.id === taskId);
-        if (!task) return prev;
-
-        taskExists = true;
-        previousStatus = task.status;
-
-        if (task.status === newStatus) return prev;
-
-        return prev.map((t) =>
-          t.id === taskId ? { ...t, status: newStatus } : t
-        );
-      });
-
-      if (!taskExists || previousStatus === null || previousStatus === newStatus) {
+      if (!existingTask || existingTask.status === newStatus) {
         finishTaskOperation(taskId, operationId);
         return;
       }
+
+      const previousStatus = existingTask.status;
+
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === taskId ? { ...task, status: newStatus } : task
+        )
+      );
 
       try {
         const res = await fetch(`/api/tasks/${taskId}`, {
@@ -255,6 +253,10 @@ export default function Board({ initialTasks }: BoardProps) {
         if (!isTaskOperationActive(taskId, operationId)) return;
 
         setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
+        showToast(
+          `Task moved from ${STATUS_LABELS[previousStatus]} to ${STATUS_LABELS[updated.status]}`,
+          "success"
+        );
       } catch (err) {
         if (isTaskOperationActive(taskId, operationId)) {
           setTasks((prev) =>
@@ -274,33 +276,32 @@ export default function Board({ initialTasks }: BoardProps) {
       finishTaskOperation,
       handleUnauthorized,
       isTaskOperationActive,
+      tasksRef,
     ]
   );
 
   const handleEdit = useCallback(
     async (taskId: number, title: string, description: string) => {
       const operationId = beginTaskOperation(taskId);
-      let previousTask: Pick<Task, "title" | "description"> | null = null;
-      let taskExists = false;
+      const existingTask = tasksRef.current.find((task) => task.id === taskId);
 
-      setTasks((prev) => {
-        const task = prev.find((t) => t.id === taskId);
-        if (!task) return prev;
-
-        taskExists = true;
-        previousTask = { title: task.title, description: task.description };
-
-        return prev.map((t) =>
-          t.id === taskId
-            ? { ...t, title, description: description || null }
-            : t
-        );
-      });
-
-      if (!taskExists || !previousTask) {
+      if (!existingTask) {
         finishTaskOperation(taskId, operationId);
         throw new Error("Task not found");
       }
+
+      const previousTask: Pick<Task, "title" | "description"> = {
+        title: existingTask.title,
+        description: existingTask.description,
+      };
+
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === taskId
+            ? { ...task, title, description: description || null }
+            : task
+        )
+      );
 
       try {
         const res = await fetch(`/api/tasks/${taskId}`, {
@@ -362,27 +363,22 @@ export default function Board({ initialTasks }: BoardProps) {
       finishTaskOperation,
       handleUnauthorized,
       isTaskOperationActive,
+      tasksRef,
     ]
   );
 
   const handleDelete = useCallback(
     async (taskId: number) => {
       const operationId = beginTaskOperation(taskId);
-      let removedTask: Task | null = null;
-      let removedIndex = -1;
+      const removedIndex = tasksRef.current.findIndex((task) => task.id === taskId);
+      const removedTask = removedIndex >= 0 ? tasksRef.current[removedIndex] : null;
 
-      setTasks((prev) => {
-        removedIndex = prev.findIndex((t) => t.id === taskId);
-        if (removedIndex === -1) return prev;
-
-        removedTask = prev[removedIndex];
-        return prev.filter((t) => t.id !== taskId);
-      });
-
-      if (!removedTask || removedIndex < 0) {
+      if (!removedTask) {
         finishTaskOperation(taskId, operationId);
         return;
       }
+
+      setTasks((prev) => prev.filter((task) => task.id !== taskId));
 
       try {
         const res = await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
@@ -433,6 +429,7 @@ export default function Board({ initialTasks }: BoardProps) {
       finishTaskOperation,
       handleUnauthorized,
       isTaskOperationActive,
+      tasksRef,
     ]
   );
 
@@ -445,16 +442,38 @@ export default function Board({ initialTasks }: BoardProps) {
     setActiveTask(null);
     const { active, over } = event;
     if (!over) return;
+
     const draggedTask = active.data.current?.task as Task | undefined;
     if (!draggedTask) return;
-    const targetStatus = over.data.current?.status as TaskStatus | undefined;
-    if (!targetStatus || targetStatus === draggedTask.status) return;
 
-    const allowed = VALID_STATUS_TRANSITIONS[draggedTask.status];
+    const currentTask = tasksRef.current.find((task) => task.id === draggedTask.id);
+    const sourceStatus = currentTask?.status ?? draggedTask.status;
+
+    let targetStatus = over.data.current?.status as TaskStatus | undefined;
+
+    if (!targetStatus) {
+      const overId = String(over.id);
+
+      if (overId.startsWith("column-")) {
+        const parsedStatus = overId.replace("column-", "") as TaskStatus;
+        if (COLUMN_ORDER.includes(parsedStatus)) {
+          targetStatus = parsedStatus;
+        }
+      } else if (overId.startsWith("task-")) {
+        const overTaskId = Number(overId.replace("task-", ""));
+        const overTask = tasksRef.current.find((task) => task.id === overTaskId);
+        targetStatus = overTask?.status;
+      }
+    }
+
+    if (!targetStatus || targetStatus === sourceStatus) return;
+
+    const allowed = VALID_STATUS_TRANSITIONS[sourceStatus];
     if (!allowed.includes(targetStatus)) {
       showToast(`Cannot move to ${STATUS_LABELS[targetStatus]}`, "error");
       return;
     }
+
     handleMove(draggedTask.id, targetStatus);
   };
 
@@ -586,7 +605,13 @@ export default function Board({ initialTasks }: BoardProps) {
         <DragOverlay>
           {activeTask ? (
             <div className="drag-overlay">
-              <TaskCard task={activeTask} onEdit={() => {}} onDelete={() => {}} onMove={() => {}} />
+              <TaskCard
+                task={activeTask}
+                onEdit={() => {}}
+                onDelete={() => {}}
+                onMove={() => {}}
+                draggable={false}
+              />
             </div>
           ) : null}
         </DragOverlay>
