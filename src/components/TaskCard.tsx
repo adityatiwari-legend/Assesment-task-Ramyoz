@@ -10,13 +10,21 @@ interface TaskCardProps {
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
   onMove: (taskId: number, newStatus: TaskStatus) => void;
+  draggable?: boolean;
 }
 
-export default function TaskCard({ task, onEdit, onDelete, onMove }: TaskCardProps) {
+export default function TaskCard({
+  task,
+  onEdit,
+  onDelete,
+  onMove,
+  draggable = true,
+}: TaskCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
-      id: `task-${task.id}`,
+      id: draggable ? `task-${task.id}` : `overlay-task-${task.id}`,
       data: { task },
+      disabled: !draggable,
     });
 
   const [showActions, setShowActions] = useState(false);
@@ -36,9 +44,9 @@ export default function TaskCard({ task, onEdit, onDelete, onMove }: TaskCardPro
       className={`group relative w-full bg-white rounded-2xl border-2 border-black p-4 sm:p-5
                   shadow-brutal hover:shadow-brutal-lg transition-shadow duration-200
                   ${isDragging ? "opacity-60 scale-100 rotate-3 z-50 shadow-brutal-lg" : ""}
-                  cursor-grab active:cursor-grabbing flex flex-col gap-4`}
-      {...listeners}
-      {...attributes}
+                  ${draggable ? "cursor-grab active:cursor-grabbing" : "cursor-default"} flex flex-col gap-4`}
+      {...(draggable ? listeners : {})}
+      {...(draggable ? attributes : {})}
     >
       {/* Title + Actions */}
       <div className="flex items-start justify-between gap-3">
